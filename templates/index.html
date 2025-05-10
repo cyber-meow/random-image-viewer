@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Moving Grid</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        #mode-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewport">
+        <div id="infinite-grid">
+            <!-- Images will be dynamically inserted here -->
+        </div>
+    </div>
+    
+    <!-- Modal for enlarged image view -->
+    <div id="image-modal" class="modal">
+        <span class="close-button">&times;</span>
+        <img class="modal-content" id="modal-image">
+    </div>
+    
+    <div id="mode-toggle" onclick="toggleMode()">Using GitHub Images</div>
+    
+    <script>
+        // Function to get URL parameters
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Function to toggle between local and GitHub modes
+        function toggleMode() {
+            const currentMode = localStorage.getItem('imageMode') || 'local';
+            const newMode = currentMode === 'local' ? 'github' : 'local';
+            localStorage.setItem('imageMode', newMode);
+            
+            const toggleButton = document.getElementById('mode-toggle');
+            toggleButton.textContent = newMode === 'local' ? 'Using GitHub Images' : 'Using Local Images';
+            
+            // Reload the page to apply the new mode
+            location.reload();
+        }
+
+        // Create a gridConfig object that will be used by script.js
+        const gridConfig = {
+            // Default values
+            cellSize: 150,
+            gridPadding: 2,
+            moveSpeed: 0.5,
+            randomWalkInterval: 600,
+            randomWalkIntensity: 0.4,
+            directionChangeChance: 0,
+            usedImageMemory: 200,
+            
+            // Fallback URLs for when image loading fails
+            fallbackUrls: [
+                "https://picsum.photos/seed/img01/800/600",
+                "https://picsum.photos/seed/img02/800/600",
+                "https://picsum.photos/seed/img03/800/600",
+                "https://picsum.photos/seed/img04/800/600",
+                "https://picsum.photos/seed/img05/800/600",
+                "https://picsum.photos/seed/img06/800/600",
+                "https://picsum.photos/seed/img07/800/600",
+                "https://picsum.photos/seed/img08/800/600",
+                "https://picsum.photos/seed/img09/800/600",
+                "https://picsum.photos/seed/img10/800/600"
+            ]
+        };
+
+        // Set up the configuration based on URL and local storage
+        (function setupConfig() {
+            // Get theme from URL parameter
+            const themeParam = getUrlParameter('theme');
+            gridConfig.theme = themeParam || 'general';
+            
+            // Set aspect ratio based on theme
+            if (gridConfig.theme === 'this-machu-does-not-exist') {
+                gridConfig.aspectRatio = { width: 4, height: 3 };
+            } else {
+                gridConfig.aspectRatio = { width: 1, height: 1 };
+            }
+            
+            // Determine if we're using local or GitHub images
+            const imageMode = localStorage.getItem('imageMode') || 'local';
+            const toggleButton = document.getElementById('mode-toggle');
+            toggleButton.textContent = imageMode === 'local' ? 'Using GitHub Images' : 'Using Local Images';
+            
+            // Set the image URLs file path based on the mode
+            if (imageMode === 'local') {
+                // Use Flask's static files
+                const filename = gridConfig.theme === 'general' ? 'general.txt' : `${gridConfig.theme}.txt`;
+                gridConfig.imageUrlsFile = `{{ url_for('static', filename='data/') }}${filename}`;
+            } else {
+                // Use the original GitHub URL
+                const filename = gridConfig.theme === 'general' ? 'images.txt' : `${gridConfig.theme}.txt`;
+                gridConfig.imageUrlsFile = `https://raw.githubusercontent.com/yourusername/your-repo/main/image_urls/${filename}`;
+            }
+            
+            console.log('Grid configuration:', gridConfig);
+        })();
+    </script>
+    
+    <!-- Include script.js -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html> 
