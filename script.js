@@ -75,26 +75,54 @@ document.addEventListener('DOMContentLoaded', function() {
                                     pathInRepo = urlParts.slice(treePath + 2).join('/');
                                 }
                                 
-                                console.log(`Fetching images from repo: ${repoId}, path: ${pathInRepo}`);
+                                // Create a cache key for this specific repository and path
+                                const cacheKey = `hf_images_${repoId}_${pathInRepo}`.replace(/[^a-zA-Z0-9_]/g, '_');
                                 
-                                // Fetch the file list from the Hugging Face API
-                                const apiUrl = `https://huggingface.co/api/datasets/${repoId}/tree/main/${pathInRepo}`;
-                                const response = await fetch(apiUrl);
+                                // Check if we have cached data and it's not too old (24 hours)
+                                const cachedData = localStorage.getItem(cacheKey);
+                                const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`);
+                                const cacheAge = cacheTimestamp ? (Date.now() - parseInt(cacheTimestamp)) : Infinity;
+                                const cacheValid = cacheAge < 24 * 60 * 60 * 1000; // 24 hours
                                 
-                                if (!response.ok) {
-                                    throw new Error(`Failed to fetch directory listing: ${response.status}`);
+                                let hfImageUrls = [];
+                                
+                                if (cachedData && cacheValid) {
+                                    // Use cached data
+                                    console.log(`Using cached image list for ${repoId}/${pathInRepo}`);
+                                    hfImageUrls = JSON.parse(cachedData);
+                                } else {
+                                    // Fetch the file list from the Hugging Face API
+                                    console.log(`Fetching images from repo: ${repoId}, path: ${pathInRepo}`);
+                                    const apiUrl = `https://huggingface.co/api/datasets/${repoId}/tree/main/${pathInRepo}`;
+                                    
+                                    // Add a small delay to avoid rate limiting
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                    
+                                    const response = await fetch(apiUrl);
+                                    
+                                    if (!response.ok) {
+                                        throw new Error(`Failed to fetch directory listing: ${response.status}`);
+                                    }
+                                    
+                                    const fileList = await response.json();
+                                    
+                                    // Extract image files and construct URLs
+                                    hfImageUrls = fileList
+                                        .filter(file => file.type === "file" && 
+                                            (file.path.endsWith(".png") || 
+                                             file.path.endsWith(".jpg") || 
+                                             file.path.endsWith(".jpeg") || 
+                                             file.path.endsWith(".gif")))
+                                        .map(file => `https://huggingface.co/datasets/${repoId}/resolve/main/${file.path}`);
+                                    
+                                    // Cache the results
+                                    try {
+                                        localStorage.setItem(cacheKey, JSON.stringify(hfImageUrls));
+                                        localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+                                    } catch (e) {
+                                        console.warn("Could not cache image list (storage may be full):", e);
+                                    }
                                 }
-                                
-                                const fileList = await response.json();
-                                
-                                // Extract image files and construct URLs
-                                const hfImageUrls = fileList
-                                    .filter(file => file.type === "file" && 
-                                        (file.path.endsWith(".png") || 
-                                         file.path.endsWith(".jpg") || 
-                                         file.path.endsWith(".jpeg") || 
-                                         file.path.endsWith(".gif")))
-                                    .map(file => `https://huggingface.co/datasets/${repoId}/resolve/main/${file.path}`);
                                 
                                 console.log(`Found ${hfImageUrls.length} images in Hugging Face directory`);
                                 processedUrls = processedUrls.concat(hfImageUrls);
@@ -103,6 +131,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         } catch (error) {
                             console.error("Error processing Hugging Face directory:", error);
+                            
+                            // If we have a fallback cached version, use it even if it's old
+                            const cacheKey = `hf_images_fallback_${hfUrl.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+                            const cachedData = localStorage.getItem(cacheKey);
+                            
+                            if (cachedData) {
+                                console.log("Using fallback cached data due to error");
+                                const fallbackUrls = JSON.parse(cachedData);
+                                processedUrls = processedUrls.concat(fallbackUrls);
+                            }
                         }
                     } else {
                         // Regular image URL
@@ -231,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Remove cells that are no longer visible
         for (const [cellKey, cellElement] of visibleCells.entries()) {
             if (!updatedCells.has(cellKey)) {
-                grid.removeChild(cellElement);
+                grid.removeChild(cellElement.element);
                 visibleCells.delete(cellKey);
             }
         }
@@ -285,20 +323,42 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create a new grid cell
     function createGridCell(col, row) {
         const cellKey = `${col},${row}`;
-        const cellSize = config.cellSize;
+        const baseCellSize = config.cellSize;
         const cellPadding = config.gridPadding;
         
         // Create the cell element
         const cell = document.createElement('div');
         cell.className = 'grid-cell';
         
-        // Position the cell
-        const x = col * (cellSize + cellPadding);
-        const y = row * (cellSize + cellPadding);
+        // Calculate cell dimensions based on aspect ratio
+        let cellWidth = baseCellSize;
+        let cellHeight = baseCellSize;
+        
+        if (config.aspectRatio) {
+            const { width, height } = config.aspectRatio;
+            const ratio = width / height;
+            
+            // Adjust dimensions to maintain aspect ratio
+            // We'll keep the area approximately the same as a square cell
+            if (ratio >= 1) {
+                // Landscape or square orientation
+                cellWidth = baseCellSize * Math.sqrt(ratio);
+                cellHeight = cellWidth / ratio;
+            } else {
+                // Portrait orientation
+                cellHeight = baseCellSize / Math.sqrt(ratio);
+                cellWidth = cellHeight * ratio;
+            }
+        }
+        
+        // Position the cell using the calculated dimensions
+        const x = col * (cellWidth + cellPadding);
+        const y = row * (cellHeight + cellPadding);
+        
         cell.style.left = `${x}px`;
         cell.style.top = `${y}px`;
-        cell.style.width = `${cellSize}px`;
-        cell.style.height = `${cellSize}px`;
+        cell.style.width = `${cellWidth}px`;
+        cell.style.height = `${cellHeight}px`;
         
         // Get a random image that hasn't been used recently
         const imageUrl = getRandomImageUrl(cellKey);
@@ -308,6 +368,9 @@ document.addEventListener('DOMContentLoaded', function() {
         img.src = imageUrl;
         img.alt = 'Grid Image';
         img.loading = 'lazy';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
         
         // Add click event to open the modal
         cell.addEventListener('click', function() {
@@ -317,8 +380,14 @@ document.addEventListener('DOMContentLoaded', function() {
         cell.appendChild(img);
         grid.appendChild(cell);
         
-        // Store the cell in our map
-        visibleCells.set(cellKey, cell);
+        // Store the cell in our map with its dimensions
+        visibleCells.set(cellKey, {
+            element: cell,
+            width: cellWidth,
+            height: cellHeight
+        });
+        
+        return { width: cellWidth, height: cellHeight };
     }
 
     // Set up the modal functionality
@@ -353,6 +422,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const modalImg = document.getElementById('modal-image');
         
         modalImg.src = imageUrl;
+        
+        // Apply aspect ratio to modal image if configured
+        if (config.aspectRatio) {
+            const { width, height } = config.aspectRatio;
+            
+            // Calculate the aspect ratio
+            const ratio = width / height;
+            
+            // Get viewport dimensions
+            const viewportWidth = window.innerWidth * 0.8;
+            const viewportHeight = window.innerHeight * 0.8;
+            
+            // Calculate the maximum size that fits in the viewport while maintaining aspect ratio
+            let imgWidth, imgHeight;
+            
+            if (viewportWidth / ratio <= viewportHeight) {
+                // Width is the limiting factor
+                imgWidth = viewportWidth;
+                imgHeight = imgWidth / ratio;
+            } else {
+                // Height is the limiting factor
+                imgHeight = viewportHeight;
+                imgWidth = imgHeight * ratio;
+            }
+            
+            // Apply the calculated dimensions
+            modalImg.style.width = `${imgWidth}px`;
+            modalImg.style.height = `${imgHeight}px`;
+        } else {
+            // No aspect ratio specified, use default constraints
+            modalImg.style.maxWidth = '80vw';
+            modalImg.style.maxHeight = '80vh';
+            modalImg.style.width = 'auto';
+            modalImg.style.height = 'auto';
+        }
+        
         modal.style.display = 'block';
     }
 }); 

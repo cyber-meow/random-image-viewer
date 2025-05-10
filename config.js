@@ -13,50 +13,28 @@ const gridConfig = (function() {
         // Use the theme from URL parameter if provided
         theme = themeParam;
         console.log("Theme set from URL parameter:", theme);
-    } else if (path.includes('this-sacchan-does-not-exist')) {
-        theme = 'sacchan';
-        console.log("Theme set from path (sacchan)");
-    } else if (path.includes('this-machu-does-not-exist')) {
-        theme = 'machu';
-        console.log("Theme set from path (machu)");
-    } else {
-        console.log("Using default theme (general)");
     }
     
     // Map themes to image files
     const themeImageFiles = {
         'general': 'image_urls/images.txt',
-        'sacchan': 'image_urls/sacchan-images.txt',
-        'machu': 'image_urls/machu-images.txt'
+        'this-sacchan-does-not-exist': 'image_urls/sacchan-images.txt',
+        'this-machu-does-not-exist': 'image_urls/machu-images.txt'
     };
     
-    // Get the selected image file
+    // Map themes to aspect ratios (width:height)
+    const themeAspectRatios = {
+        'general': { width: 1, height: 1 },           // 1:1 square (default)
+        'this-sacchan-does-not-exist': { width: 1, height: 1 }, // 920:1152 for sacchan
+        'this-machu-does-not-exist': { width: 4, height: 3 }              // 4:3 for machu
+    };
+    
+    // Get the selected image file and aspect ratio
     const selectedImageFile = themeImageFiles[theme] || themeImageFiles['general'];
+    const aspectRatio = themeAspectRatios[theme] || themeAspectRatios['general'];
     
     // Log the selected file
     console.log("Selected image file:", selectedImageFile);
-    
-    // Create a visible debug element on the page
-    setTimeout(() => {
-        const debugDiv = document.createElement('div');
-        debugDiv.style.position = 'fixed';
-        debugDiv.style.bottom = '10px';
-        debugDiv.style.left = '10px';
-        debugDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-        debugDiv.style.color = 'white';
-        debugDiv.style.padding = '10px';
-        debugDiv.style.borderRadius = '5px';
-        debugDiv.style.zIndex = '1000';
-        debugDiv.style.fontSize = '12px';
-        debugDiv.style.fontFamily = 'monospace';
-        debugDiv.innerHTML = `
-            <strong>Debug Info:</strong><br>
-            Path: ${path}<br>
-            Theme: ${theme}<br>
-            Image File: ${selectedImageFile}
-        `;
-        document.body.appendChild(debugDiv);
-    }, 1000);
     
     return {
         // Grid appearance
@@ -64,7 +42,7 @@ const gridConfig = (function() {
         gridPadding: 2,                // Padding between grid cells
 
         // Movement behavior
-        moveSpeed: 1,                  // Base speed of grid movement
+        moveSpeed: 0.5,                  // Base speed of grid movement
         randomWalkInterval: 600,       // Interval for changing direction (ms)
         randomWalkIntensity: 0.4,      // How much the direction changes (0-1)
         directionChangeChance: 0,      // Chance of significant direction change
@@ -72,6 +50,9 @@ const gridConfig = (function() {
         // Image handling
         imageUrlsFile: selectedImageFile,
         usedImageMemory: 200,          // Remember last N used images to avoid repetition
+        
+        // Aspect ratio configuration
+        aspectRatio: aspectRatio,      // Width:height ratio for images
 
         // Theme
         theme: theme,
