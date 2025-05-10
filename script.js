@@ -43,11 +43,75 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return response.text();
             })
-            .then(data => {
-                // Split the text file by lines and filter out empty lines
-                imageUrls = data.split('\n')
-                    .map(url => url.trim())
-                    .filter(url => url.length > 0);
+            .then(async data => {
+                // Split the text file by lines
+                const lines = data.split('\n').map(url => url.trim()).filter(url => url.length > 0);
+                
+                // Process each line, checking for Hugging Face URLs
+                let processedUrls = [];
+                
+                for (const line of lines) {
+                    // Check if this is a Hugging Face directory URL
+                    if (line.startsWith('hf:')) {
+                        const hfUrl = line.substring(3).trim();
+                        console.log(`Detected Hugging Face directory: ${hfUrl}`);
+                        
+                        try {
+                            // Extract repository info from the URL
+                            const urlParts = hfUrl.split('/');
+                            const repoIndex = urlParts.indexOf('datasets') + 1;
+                            
+                            if (repoIndex > 0 && repoIndex < urlParts.length) {
+                                const repoOwner = urlParts[repoIndex];
+                                const repoName = urlParts[repoIndex + 1];
+                                const repoId = `${repoOwner}/${repoName}`;
+                                
+                                // Extract path within the repository
+                                const treePath = urlParts.indexOf('tree');
+                                let pathInRepo = '';
+                                
+                                if (treePath > 0 && treePath + 2 < urlParts.length) {
+                                    // Skip 'tree/main' and get the rest of the path
+                                    pathInRepo = urlParts.slice(treePath + 2).join('/');
+                                }
+                                
+                                console.log(`Fetching images from repo: ${repoId}, path: ${pathInRepo}`);
+                                
+                                // Fetch the file list from the Hugging Face API
+                                const apiUrl = `https://huggingface.co/api/datasets/${repoId}/tree/main/${pathInRepo}`;
+                                const response = await fetch(apiUrl);
+                                
+                                if (!response.ok) {
+                                    throw new Error(`Failed to fetch directory listing: ${response.status}`);
+                                }
+                                
+                                const fileList = await response.json();
+                                
+                                // Extract image files and construct URLs
+                                const hfImageUrls = fileList
+                                    .filter(file => file.type === "file" && 
+                                        (file.path.endsWith(".png") || 
+                                         file.path.endsWith(".jpg") || 
+                                         file.path.endsWith(".jpeg") || 
+                                         file.path.endsWith(".gif")))
+                                    .map(file => `https://huggingface.co/datasets/${repoId}/resolve/main/${file.path}`);
+                                
+                                console.log(`Found ${hfImageUrls.length} images in Hugging Face directory`);
+                                processedUrls = processedUrls.concat(hfImageUrls);
+                            } else {
+                                console.error("Could not parse Hugging Face repository from URL:", hfUrl);
+                            }
+                        } catch (error) {
+                            console.error("Error processing Hugging Face directory:", error);
+                        }
+                    } else {
+                        // Regular image URL
+                        processedUrls.push(line);
+                    }
+                }
+                
+                // Use the processed URLs
+                imageUrls = processedUrls;
                 
                 // Shuffle the array for initial randomness
                 imageUrls = shuffleArray(imageUrls);
