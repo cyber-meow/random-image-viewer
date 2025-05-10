@@ -20,6 +20,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let imageUrls = [];
     let recentlyUsedImages = []; // Track recently used images to avoid repetition
     
+    // Keyboard control state
+    let keyboardControls = {
+        isActive: false,
+        keysPressed: {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false
+        },
+        panSpeed: 3 // Pixels per frame when using keyboard
+    };
+    
     // Load images from text file
     loadImagesFromFile();
 
@@ -32,6 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
         viewportHeight = window.innerHeight;
         updateVisibleGrid();
     });
+    
+    // Set up keyboard controls
+    setupKeyboardControls();
 
     // Function to load images from text file
     function loadImagesFromFile() {
@@ -193,26 +208,100 @@ document.addEventListener('DOMContentLoaded', function() {
         requestAnimationFrame(animateGrid);
     }
 
+    // Set up keyboard controls
+    function setupKeyboardControls() {
+        // Add keyboard event listeners
+        document.addEventListener('keydown', function(event) {
+            // Check if the key is one of our control keys
+            if (Object.keys(keyboardControls.keysPressed).includes(event.key)) {
+                // Prevent default behavior (like scrolling)
+                event.preventDefault();
+                
+                // Mark this key as pressed
+                keyboardControls.keysPressed[event.key] = true;
+                
+                // Activate keyboard control mode
+                if (!keyboardControls.isActive) {
+                    keyboardControls.isActive = true;
+                    
+                    // Show a visual indicator that keyboard mode is active
+                    const indicator = document.createElement('div');
+                    indicator.id = 'keyboard-control-indicator';
+                    indicator.textContent = 'Keyboard Control Active';
+                    indicator.style.position = 'fixed';
+                    indicator.style.bottom = '20px';
+                    indicator.style.left = '50%';
+                    indicator.style.transform = 'translateX(-50%)';
+                    indicator.style.background = 'rgba(0, 0, 0, 0.5)';
+                    indicator.style.color = 'white';
+                    indicator.style.padding = '8px 16px';
+                    indicator.style.borderRadius = '4px';
+                    indicator.style.zIndex = '1000';
+                    document.body.appendChild(indicator);
+                    
+                    // Pause the random walk
+                    gridVelocity.x = 0;
+                    gridVelocity.y = 0;
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', function(event) {
+            // Check if the key is one of our control keys
+            if (Object.keys(keyboardControls.keysPressed).includes(event.key)) {
+                // Mark this key as released
+                keyboardControls.keysPressed[event.key] = false;
+                
+                // Check if all keys are released
+                const allKeysReleased = Object.values(keyboardControls.keysPressed).every(pressed => !pressed);
+                
+                if (allKeysReleased && keyboardControls.isActive) {
+                    // Deactivate keyboard control mode after a short delay
+                    setTimeout(function() {
+                        // Double-check that all keys are still released
+                        if (Object.values(keyboardControls.keysPressed).every(pressed => !pressed)) {
+                            keyboardControls.isActive = false;
+                            
+                            // Remove the visual indicator
+                            const indicator = document.getElementById('keyboard-control-indicator');
+                            if (indicator) {
+                                document.body.removeChild(indicator);
+                            }
+                            
+                            // Resume random walk with a new random direction
+                            const angle = Math.random() * Math.PI * 2;
+                            gridVelocity.x = Math.cos(angle) * config.moveSpeed;
+                            gridVelocity.y = Math.sin(angle) * config.moveSpeed;
+                        }
+                    }, 3000); // Resume random walk after 3 seconds of inactivity
+                }
+            }
+        });
+    }
+
     // Start the random walk animation
     function startRandomWalk() {
         // Change direction randomly at intervals
         setInterval(function() {
-            // Occasionally make a more dramatic direction change
-            if (Math.random() < config.directionChangeChance) {
-                // Completely new random direction
-                const angle = Math.random() * Math.PI * 2;
-                gridVelocity.x = Math.cos(angle) * config.moveSpeed;
-                gridVelocity.y = Math.sin(angle) * config.moveSpeed;
-            } else {
-                // Add a random change to the velocity
-                gridVelocity.x += (Math.random() * 2 - 1) * config.randomWalkIntensity;
-                gridVelocity.y += (Math.random() * 2 - 1) * config.randomWalkIntensity;
-                
-                // Normalize the velocity to maintain consistent speed
-                const speed = Math.sqrt(gridVelocity.x * gridVelocity.x + gridVelocity.y * gridVelocity.y);
-                if (speed > 0) {
-                    gridVelocity.x = (gridVelocity.x / speed) * config.moveSpeed;
-                    gridVelocity.y = (gridVelocity.y / speed) * config.moveSpeed;
+            // Only change direction if keyboard control is not active
+            if (!keyboardControls.isActive) {
+                // Occasionally make a more dramatic direction change
+                if (Math.random() < config.directionChangeChance) {
+                    // Completely new random direction
+                    const angle = Math.random() * Math.PI * 2;
+                    gridVelocity.x = Math.cos(angle) * config.moveSpeed;
+                    gridVelocity.y = Math.sin(angle) * config.moveSpeed;
+                } else {
+                    // Add a random change to the velocity
+                    gridVelocity.x += (Math.random() * 2 - 1) * config.randomWalkIntensity;
+                    gridVelocity.y += (Math.random() * 2 - 1) * config.randomWalkIntensity;
+                    
+                    // Normalize the velocity to maintain consistent speed
+                    const speed = Math.sqrt(gridVelocity.x * gridVelocity.x + gridVelocity.y * gridVelocity.y);
+                    if (speed > 0) {
+                        gridVelocity.x = (gridVelocity.x / speed) * config.moveSpeed;
+                        gridVelocity.y = (gridVelocity.y / speed) * config.moveSpeed;
+                    }
                 }
             }
         }, config.randomWalkInterval);
@@ -220,9 +309,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Animate the grid movement
     function animateGrid() {
-        // Update grid position based on velocity
-        gridPosition.x += gridVelocity.x;
-        gridPosition.y += gridVelocity.y;
+        // Handle keyboard controls
+        if (keyboardControls.isActive) {
+            // Calculate movement based on pressed keys
+            let dx = 0;
+            let dy = 0;
+            
+            if (keyboardControls.keysPressed.ArrowLeft) dx += keyboardControls.panSpeed;
+            if (keyboardControls.keysPressed.ArrowRight) dx -= keyboardControls.panSpeed;
+            if (keyboardControls.keysPressed.ArrowUp) dy += keyboardControls.panSpeed;
+            if (keyboardControls.keysPressed.ArrowDown) dy -= keyboardControls.panSpeed;
+            
+            // Update grid position directly
+            gridPosition.x += dx;
+            gridPosition.y += dy;
+        } else {
+            // Update grid position based on velocity
+            gridPosition.x += gridVelocity.x;
+            gridPosition.y += gridVelocity.y;
+        }
         
         // Update the grid's visual position
         updateGridPosition();
