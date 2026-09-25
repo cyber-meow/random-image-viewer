@@ -5,19 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Infinite Moving Grid</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <style>
-        #mode-toggle {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/back-link.css') }}">
 </head>
 <body>
     <div id="viewport">
@@ -32,26 +20,13 @@
         <img class="modal-content" id="modal-image">
     </div>
     
-    <div id="mode-toggle" onclick="toggleMode()">Using GitHub Images</div>
+    <a id="back-link" href="{{ url_for('index') }}">&larr; Themes</a>
     
     <script>
         // Function to get URL parameters
         function getUrlParameter(name) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
-        }
-
-        // Function to toggle between local and GitHub modes
-        function toggleMode() {
-            const currentMode = localStorage.getItem('imageMode') || 'local';
-            const newMode = currentMode === 'local' ? 'github' : 'local';
-            localStorage.setItem('imageMode', newMode);
-            
-            const toggleButton = document.getElementById('mode-toggle');
-            toggleButton.textContent = newMode === 'local' ? 'Using GitHub Images' : 'Using Local Images';
-            
-            // Reload the page to apply the new mode
-            location.reload();
         }
 
         // Create a gridConfig object that will be used by script.js
@@ -80,7 +55,7 @@
             ]
         };
 
-        // Set up the configuration based on URL and local storage
+        // Set up the configuration based on URL
         (function setupConfig() {
             // Get theme from URL parameter
             const themeParam = getUrlParameter('theme');
@@ -93,21 +68,8 @@
                 gridConfig.aspectRatio = { width: 1, height: 1 };
             }
             
-            // Determine if we're using local or GitHub images
-            const imageMode = localStorage.getItem('imageMode') || 'local';
-            const toggleButton = document.getElementById('mode-toggle');
-            toggleButton.textContent = imageMode === 'local' ? 'Using GitHub Images' : 'Using Local Images';
-            
-            // Set the image URLs file path based on the mode
-            if (imageMode === 'local') {
-                // Use Flask's static files
-                const filename = gridConfig.theme === 'general' ? 'general.txt' : `${gridConfig.theme}.txt`;
-                gridConfig.imageUrlsFile = `{{ url_for('static', filename='data/') }}${filename}`;
-            } else {
-                // Use the original GitHub URL
-                const filename = gridConfig.theme === 'general' ? 'images.txt' : `${gridConfig.theme}.txt`;
-                gridConfig.imageUrlsFile = `https://raw.githubusercontent.com/yourusername/your-repo/main/image_urls/${filename}`;
-            }
+            // Image list served by Flask from the theme's folder
+            gridConfig.imageUrlsFile = `/api/images/${encodeURIComponent(gridConfig.theme)}`;
             
             console.log('Grid configuration:', gridConfig);
         })();

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slideshow</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/slideshow.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/back-link.css') }}">
+</head>
+<body>
+    <div id="stage">
+        <div class="panel"><img id="left-image" alt=""></div>
+        <div class="panel"><img id="right-image" alt=""></div>
+    </div>
+
+    <a id="back-link" href="{{ url_for('index') }}">&larr; Themes</a>
+
+    <div id="status-indicator"></div>
+    <div id="message"></div>
+
+    <div id="controls">
+        <label>Every <input id="interval-input" type="number" min="1" step="1"> s</label>
+        <span id="counter"></span>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/slideshow.js') }}"></script>
+</body>
+</html>

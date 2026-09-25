@@ -1,0 +1,103 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    background-color: #111;
+    color: #ddd;
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    width: 100vw;
+    cursor: pointer;
+    user-select: none;
+}
+
+#stage {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    gap: 4px;
+}
+
+.panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.panel img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: opacity 0.3s ease;
+}
+
+.panel img:not([src]) {
+    visibility: hidden;
+}
+
+/* Brief pause/play glyph shown when toggling */
+#status-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 64px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 10px 28px;
+    border-radius: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+#status-indicator.visible {
+    opacity: 1;
+}
+
+#message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 18px;
+}
+
+#controls {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: default;
+    opacity: 0.3;
+    transition: opacity 0.2s ease;
+}
+
+#controls:hover {
+    opacity: 1;
+}
+
+#controls input {
+    width: 50px;
+    margin: 0 4px;
+    background: #222;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 2px 4px;
+}
+
+#counter {
+    margin-left: 10px;
+    color: #aaa;
+}

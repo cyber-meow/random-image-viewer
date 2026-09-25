@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Themes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #111;
+            color: #ddd;
+            font-family: Arial, sans-serif;
+            padding: 30px;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: normal;
+            margin-bottom: 20px;
+        }
+
+        #themes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .theme-card {
+            background-color: #222;
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease;
+        }
+
+        .theme-card:hover {
+            transform: scale(1.02);
+        }
+
+        .theme-card.empty {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .thumbnail {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            display: block;
+            background-color: #1a1a1a;
+        }
+
+        .info {
+            padding: 10px 12px 12px;
+        }
+
+        .name {
+            font-size: 16px;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .meta {
+            font-size: 12px;
+            color: #888;
+            word-break: break-all;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .buttons a {
+            flex: 1;
+            text-align: center;
+            padding: 6px 0;
+            border-radius: 4px;
+            background-color: #333;
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .buttons a:hover {
+            background-color: #444;
+        }
+    </style>
+</head>
+<body>
+    <h1>Themes</h1>
+
+    <div id="themes">
+        {% for theme in themes %}
+        <div class="theme-card{% if not theme.count %} empty{% endif %}">
+            {% if theme.thumbnail %}
+            <img class="thumbnail" src="{{ theme.thumbnail }}" alt="" loading="lazy">
+            {% else %}
+            <div class="thumbnail"></div>
+            {% endif %}
+            <div class="info">
+                <div class="name">{{ theme.name }}</div>
+                <div class="meta">{{ theme.count }} image{{ '' if theme.count == 1 else 's' }}</div>
+                <div class="meta">{{ theme.folder }}</div>
+                <div class="buttons">
+                    <a href="{{ url_for('grid', theme=theme.name) }}" data-view="grid">Grid</a>
+                    <a href="{{ url_for('slideshow', theme=theme.name) }}" data-view="slideshow">Slideshow</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // Clicking a card opens whichever view was used last
+        const lastView = localStorage.getItem('lastView') || 'grid';
+        document.querySelectorAll('.theme-card').forEach(card => {
+            card.addEventListener('click', () => {
+                window.location.href = card.querySelector(`[data-view="${lastView}"]`).href;
+            });
+        });
+
+        document.querySelectorAll('[data-view]').forEach(button => {
+            button.addEventListener('click', event => {
+                event.stopPropagation();
+                localStorage.setItem('lastView', button.dataset.view);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+/* "← Themes" link shared by the grid and slideshow pages */
+#back-link {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    text-decoration: none;
+    opacity: 0.3;
+    transition: opacity 0.2s ease;
+}
+
+#back-link:hover {
+    opacity: 1;
+}
