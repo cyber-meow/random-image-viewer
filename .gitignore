@@ -174,3 +174,7 @@ cython_debug/
 .pypirc
 
 **/.DS_Store
+
+# Local image collections and generated lists
+static/images/general/
+static/data/
