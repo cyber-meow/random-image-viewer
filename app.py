@@ -95,11 +95,6 @@ def local_image(theme, filename):
     return send_from_directory(folder, filename)
 
 
-@app.route('/static/data/<path:filename>')
-def serve_data(filename):
-    return send_from_directory(os.path.join(app.static_folder, 'data'), filename)
-
-
 def lan_address():
     """Best-guess LAN IP of this machine, for printing reachable URLs."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:

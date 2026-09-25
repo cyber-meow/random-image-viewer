@@ -175,6 +175,5 @@ cython_debug/
 
 **/.DS_Store
 
-# Local image collections and generated lists
+# Local image collections
 static/images/general/
-static/data/
